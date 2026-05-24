@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
-// Using 'any' types here to bypass the strict TypeScript checking that was failing your build
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -9,8 +8,6 @@ function App() {
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
 
   const [featuredAlbums] = useState([
     { id: 'f1', name: 'Pushpa 2 The Rule', query: 'Pushpa 2' },
@@ -101,12 +98,12 @@ function App() {
 
   return (
     <div className="music-app" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#070708', overflow: 'hidden' }}>
-      <main style={{ flexGrow: 1, overflowY: 'auto', padding: '20px 16px', paddingBottom: currentTrack ? '180px' : '90px' }} className="scroll-container">
+      <main style={{ flexGrow: 1, overflowY: 'auto', padding: '20px 16px', paddingBottom: currentTrack ? '180px' : '90px' }}>
         {activeTab === 'home' && (
           <div>
             <h2 style={{ fontSize: '22px', color: '#ffffff' }}>Good Day, Explorer 👋</h2>
             <div className="grid-container">
-              {featuredAlbums.map(album => (
+              {featuredAlbums.map((album: any) => (
                 <div key={album.id} className="grid-card" onClick={() => { setActiveTab('search'); setSearchQuery(album.query); executeSearch(album.query); }}>
                   <span>🎬</span> {album.name}
                 </div>
@@ -121,7 +118,7 @@ function App() {
               <button type="submit">{loading ? '...' : 'Search'}</button>
             </form>
             <div style={{ marginTop: '20px' }}>
-              {trackList.map((track) => (
+              {trackList.map((track: any) => (
                 <div key={track.id} onClick={() => selectTrack(track)} style={{ padding: '10px', color: '#fff', cursor: 'pointer' }}>
                   {track.title} - {track.artist}
                 </div>
