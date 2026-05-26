@@ -16,31 +16,19 @@ function App() {
     { id: 'f4', name: 'Kalki 2898 AD', query: 'Kalki' }
   ]);
 
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('charan_search_history');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [recentTracks, setRecentTracks] = useState<any[]>(() => {
-    const saved = localStorage.getItem('charan_recent_tracks');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const audioRef = useRef(new Audio());
-
-  useEffect(() => {
-    localStorage.setItem('charan_search_history', JSON.stringify(searchHistory));
-  }, [searchHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('charan_recent_tracks', JSON.stringify(recentTracks));
-  }, [recentTracks]);
 
   const executeSearch = async (queryText: string) => {
     if (!queryText.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/search/songs?query=${encodeURIComponent(queryText)}`);
+      // Direct API call to ensure stability
+      const response = await fetch(`https://saavn.sumit.co/api/search/songs?query=${encodeURIComponent(queryText)}`);
+      
+      if (!response.ok) {
+        throw new Error('Server unreachable');
+      }
+
       const data = await response.json();
 
       if (data.success && data.data?.results) {
@@ -49,16 +37,17 @@ function App() {
           title: song.name,
           artist: song.artists?.primary?.[0]?.name || 'Popular Artist',
           album: song.album?.name || 'Single Track',
-          duration: song.duration ? parseFloat(song.duration / 60).toFixed(2).replace('.', ':') : '0:00',
           coverUrl: song.image?.[2]?.url || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=150',
           audioUrl: song.downloadUrl?.[4]?.url || song.downloadUrl?.[3]?.url || ''
         }));
         
         setTrackList(formattedTracks);
-        setSearchHistory(prev => [queryText, ...prev.filter(i => i !== queryText)].slice(0, 4));
+      } else {
+        alert("No songs found for this search.");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Search Error:", error);
+      alert("Service is currently unavailable. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -67,23 +56,7 @@ function App() {
   const selectTrack = (track: any) => {
     setCurrentTrack(track);
     setIsPlaying(true);
-    setRecentTracks(prev => [track, ...prev.filter(i => i.id !== track.id)].slice(0, 6));
   };
-
-  const handleNextTrack = () => {
-    if (trackList.length === 0) return;
-    const currentIndex = trackList.findIndex(t => t.id === currentTrack?.id);
-    const nextIndex = (currentIndex + 1) % trackList.length;
-    setCurrentTrack(trackList[nextIndex]);
-    setIsPlaying(true);
-  };
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    const handleEnd = () => handleNextTrack();
-    audio.addEventListener('ended', handleEnd);
-    return () => audio.removeEventListener('ended', handleEnd);
-  }, [trackList, currentTrack]);
 
   useEffect(() => {
     if (currentTrack?.audioUrl) {
@@ -97,15 +70,15 @@ function App() {
   }, [isPlaying]);
 
   return (
-    <div className="music-app" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#070708', overflow: 'hidden' }}>
-      <main style={{ flexGrow: 1, overflowY: 'auto', padding: '20px 16px', paddingBottom: currentTrack ? '180px' : '90px' }}>
+    <div className="music-app" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#070708', color: '#fff' }}>
+      <main style={{ flexGrow: 1, overflowY: 'auto', padding: '20px' }}>
         {activeTab === 'home' && (
           <div>
-            <h2 style={{ fontSize: '22px', color: '#ffffff' }}>Good Day, Explorer 👋</h2>
-            <div className="grid-container">
-              {featuredAlbums.map((album: any) => (
-                <div key={album.id} className="grid-card" onClick={() => { setActiveTab('search'); setSearchQuery(album.query); executeSearch(album.query); }}>
-                  <span>🎬</span> {album.name}
+            <h2>Good Day, Explorer 👋</h2>
+            <div className="grid-container" style={{ display: 'grid', gap: '10px' }}>
+              {featuredAlbums.map((album) => (
+                <div key={album.id} className="grid-card" onClick={() => { setActiveTab('search'); setSearchQuery(album.query); executeSearch(album.query); }} style={{ padding: '15px', background: '#121216', cursor: 'pointer' }}>
+                  {album.name}
                 </div>
               ))}
             </div>
@@ -113,13 +86,13 @@ function App() {
         )}
         {activeTab === 'search' && (
           <div>
-            <form onSubmit={(e) => { e.preventDefault(); executeSearch(searchQuery); }} style={{ display: 'flex', background: '#121216', padding: '8px', borderRadius: '24px' }}>
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." style={{ flexGrow: 1, background: 'none', border: 'none', color: '#fff', padding: '10px' }} />
+            <form onSubmit={(e) => { e.preventDefault(); executeSearch(searchQuery); }} style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." style={{ flex: 1, padding: '10px' }} />
               <button type="submit">{loading ? '...' : 'Search'}</button>
             </form>
             <div style={{ marginTop: '20px' }}>
-              {trackList.map((track: any) => (
-                <div key={track.id} onClick={() => selectTrack(track)} style={{ padding: '10px', color: '#fff', cursor: 'pointer' }}>
+              {trackList.map((track) => (
+                <div key={track.id} onClick={() => selectTrack(track)} style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid #333' }}>
                   {track.title} - {track.artist}
                 </div>
               ))}
@@ -127,7 +100,7 @@ function App() {
           </div>
         )}
       </main>
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" style={{ padding: '20px', display: 'flex', justifyContent: 'space-around', background: '#121216' }}>
         <button onClick={() => setActiveTab('home')}>🏠 Home</button>
         <button onClick={() => setActiveTab('search')}>🔍 Search</button>
       </nav>
